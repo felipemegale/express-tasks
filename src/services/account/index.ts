@@ -1,5 +1,6 @@
 import { getConnection } from "typeorm";
-import { hash } from "bcrypt";
+import { hash as hashPassword, compare as comparePasswords } from "bcrypt";
+import * as jwt from "jsonwebtoken";
 import { StatusCodes } from "http-status-codes";
 import SignUpDataDTO from "../../interfaces/SignUpDataDTO";
 import { BCRYPT_ROUNDS } from "../../utils/constants";
@@ -25,7 +26,10 @@ export default class AccountService {
             };
         }
 
-        const hashedPasswd = await hash(signUpData.password, BCRYPT_ROUNDS);
+        const hashedPasswd = await hashPassword(
+            signUpData.password,
+            BCRYPT_ROUNDS
+        );
 
         const newUser = new User();
 
@@ -37,7 +41,7 @@ export default class AccountService {
         try {
             const savedUser = await UserRepository.save(newUser);
             return {
-                data: { ...savedUser, password: "" },
+                data: { ...savedUser, password: undefined },
                 error: "",
                 statusCode: StatusCodes.CREATED,
             };
@@ -49,8 +53,47 @@ export default class AccountService {
             };
         }
     }
+
     async signIn(signInData: SignInDataDTO): Promise<IApiReturn> {
-        console.log(signInData);
-        return {data: '', error: '', statusCode: 200};
+        const dbConnection = await getConnection();
+        const UserRepository = dbConnection.getRepository(User);
+
+        try {
+            const user = await UserRepository.findOne({
+                where: [
+                    { username: signInData.username },
+                    { email: signInData.email },
+                ],
+            });
+
+            if (!user) {
+                throw new Error("wrongUserOrPasswordExcepion");
+            }
+
+            const doPasswordsMatch = await comparePasswords(
+                signInData.password,
+                user.password
+            );
+
+            if (!doPasswordsMatch) {
+                throw new Error("wrongUserOrPasswordExcepion");
+            }
+
+            const userToken = jwt.sign({ ...user }, process.env.JWT_SECRET, {
+                expiresIn: "1 day",
+            });
+
+            return {
+                data: { ...user, password: undefined, token: userToken },
+                error: "",
+                statusCode: StatusCodes.OK,
+            };
+        } catch (err) {
+            return {
+                data: "",
+                error: err.message,
+                statusCode: StatusCodes.BAD_REQUEST,
+            };
+        }
     }
 }

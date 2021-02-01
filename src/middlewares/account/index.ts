@@ -21,7 +21,7 @@ const wrapper = (): Router => {
     router.post("/signin", async (req,res) => {
         const signInData: SignInDataDTO = req.body;
         const loggedIn = await _accountService.signIn(signInData);
-        res.json(signInData);
+        res.status(loggedIn.statusCode).json(loggedIn);
     });
 
     router
