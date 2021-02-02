@@ -79,9 +79,17 @@ export default class AccountService {
                 throw new Error("wrongUserOrPasswordExcepion");
             }
 
-            const userToken = jwt.sign({ ...user }, process.env.JWT_SECRET, {
-                expiresIn: "1 day",
-            });
+            const now = new Date().getTime();
+
+            const userToken = jwt.sign(
+                {
+                    ...user,
+                    password: "",
+                    iat: now,
+                    exp: now + 60 * 60 * 1000,
+                },
+                process.env.JWT_SECRET
+            );
 
             return {
                 data: { ...user, password: undefined, token: userToken },
