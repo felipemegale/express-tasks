@@ -8,12 +8,13 @@ import * as dotenv from "dotenv";
 import { MORGAN_FORMAT } from "./utils/constants";
 import { bgBlue } from "chalk";
 import { createConnection, ConnectionOptions } from "typeorm";
+import AuthMiddleware from "./middlewares/auth";
+import AccountMiddleware from "./middlewares/account";
+import TaskMiddleware from "./middlewares/task";
 
 dotenv.config({
     path: process.env.NODE_ENV === "test" ? ".env.test" : ".env",
 });
-
-import AccountMiddleware from "./middlewares/account";
 
 const app = express();
 const connectionOptions: ConnectionOptions = {
@@ -38,6 +39,7 @@ createConnection(connectionOptions)
     .then((conn) => {
         console.log(bgBlue(`CONNECTION NAME: ${conn.name}`));
         app.use("/api/account", AccountMiddleware());
+        app.use("/api/task", AuthMiddleware, TaskMiddleware());
     })
     .catch((err) => console.log(err));
 
