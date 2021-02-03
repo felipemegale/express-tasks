@@ -33,6 +33,20 @@ const router = async (req: Request, res: Response, next: NextFunction) => {
             throw new Error("UnauthorizedAccessException");
         }
 
+        res.locals.jwtPayload = decodedToken;
+
+        const newToken = jwt.sign(
+            {
+                ...user,
+                password: "",
+                iat: now,
+                exp: now + 60 * 60 * 1000,
+            },
+            process.env.JWT_SECRET
+        );
+
+        res.setHeader("Authorization", `Bearer ${newToken}`);
+
         next();
     } catch (err) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
