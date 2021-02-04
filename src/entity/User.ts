@@ -16,6 +16,6 @@ export default class User extends BaseEntity {
     @Column()
     name: string;
 
-    @OneToMany(type => Task, task => task.user)
+    @OneToMany((type) => Task, (task) => task.user)
     tasks: Task[];
 }
