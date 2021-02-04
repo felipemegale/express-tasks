@@ -40,4 +40,26 @@ export default class TaskService {
             };
         }
     }
+
+    async getAll(ownerId: number): Promise<IApiReturn> {
+        const dbConnection = await getConnection();
+        const TaskRepository = dbConnection.getRepository(Task);
+
+        try {
+            const tasks = await TaskRepository.createQueryBuilder("task")
+                .where('"userId" = :ownerId', { ownerId })
+                .getMany();
+            return {
+                data: tasks,
+                error: undefined,
+                statusCode: StatusCodes.OK,
+            };
+        } catch (err) {
+            return {
+                data: undefined,
+                error: err.message,
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            };
+        }
+    }
 }
