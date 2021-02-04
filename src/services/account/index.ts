@@ -40,8 +40,9 @@ export default class AccountService {
 
         try {
             const savedUser = await UserRepository.save(newUser);
+            delete savedUser.password;
             return {
-                data: { ...savedUser, password: undefined },
+                data: savedUser,
                 error: "",
                 statusCode: StatusCodes.CREATED,
             };
@@ -59,7 +60,7 @@ export default class AccountService {
         const UserRepository = dbConnection.getRepository(User);
 
         try {
-            const user = await UserRepository.findOne({
+            const user = await UserRepository.findOneOrFail({
                 where: [
                     { username: signInData.username },
                     { email: signInData.email },
@@ -67,7 +68,7 @@ export default class AccountService {
             });
 
             if (!user) {
-                throw new Error("wrongUserOrPasswordExcepion");
+                throw new Error("WrongUserOrPasswordExcepion");
             }
 
             const doPasswordsMatch = await comparePasswords(
@@ -76,15 +77,16 @@ export default class AccountService {
             );
 
             if (!doPasswordsMatch) {
-                throw new Error("wrongUserOrPasswordExcepion");
+                throw new Error("WrongUserOrPasswordExcepion");
             }
 
             const now = new Date().getTime();
 
+            delete user.password;
+
             const userToken = jwt.sign(
                 {
                     ...user,
-                    password: "",
                     iat: now,
                     exp: now + 60 * 60 * 1000,
                 },
@@ -92,7 +94,7 @@ export default class AccountService {
             );
 
             return {
-                data: { ...user, password: undefined, token: userToken },
+                data: { ...user, token: userToken },
                 error: "",
                 statusCode: StatusCodes.OK,
             };
