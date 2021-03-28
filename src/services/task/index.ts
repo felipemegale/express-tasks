@@ -1,15 +1,12 @@
-import { getConnection } from "typeorm";
-import { StatusCodes } from "http-status-codes";
-import IApiReturn from "../../interfaces/IApiReturn";
-import Task from "../../entity/Task";
-import User from "../../entity/User";
-import TaskCreateDTO from "../../interfaces/TaskCreateDTO";
+import { getConnection } from 'typeorm';
+import { StatusCodes } from 'http-status-codes';
+import IApiReturn from '../../interfaces/IApiReturn';
+import Task from '../../entity/Task';
+import User from '../../entity/User';
+import TaskCreateDTO from '../../interfaces/TaskCreateDTO';
 
 export default class TaskService {
-    async addTask(
-        newTask: TaskCreateDTO,
-        ownerId: number
-    ): Promise<IApiReturn> {
+    async addTask(newTask: TaskCreateDTO, ownerId: number): Promise<IApiReturn<Task, string>> {
         const dbConnection = await getConnection();
         const TaskRepository = dbConnection.getRepository(Task);
         const UserRepository = dbConnection.getRepository(User);
@@ -22,14 +19,14 @@ export default class TaskService {
 
         try {
             const user = await UserRepository.findOneOrFail(ownerId);
+            delete user.password;
+
             task.user = user;
             const savedTask = await TaskRepository.save(task);
+
             return {
-                data: {
-                    ...savedTask,
-                    user: { ...savedTask.user, password: "" },
-                },
-                error: "",
+                data: savedTask,
+                error: undefined,
                 statusCode: StatusCodes.CREATED,
             };
         } catch (err) {
@@ -41,12 +38,12 @@ export default class TaskService {
         }
     }
 
-    async getAll(ownerId: number): Promise<IApiReturn> {
+    async getAll(ownerId: number): Promise<IApiReturn<Task[], string>> {
         const dbConnection = await getConnection();
         const TaskRepository = dbConnection.getRepository(Task);
 
         try {
-            const tasks = await TaskRepository.createQueryBuilder("task")
+            const tasks = await TaskRepository.createQueryBuilder('task')
                 .where('"userId" = :ownerId', { ownerId })
                 .getMany();
             return {
