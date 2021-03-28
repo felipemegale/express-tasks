@@ -4,6 +4,7 @@ import * as jwt from 'jsonwebtoken';
 import { getConnection } from 'typeorm';
 import JWTPayload from '../../interfaces/JWTPayload';
 import User from '../../entity/User';
+import UnauthorizedError from '../../types/errors/UnauthorizedError';
 
 const router = async (req: Request, res: Response, next: NextFunction) => {
     const { authorization } = req.headers;
@@ -11,14 +12,14 @@ const router = async (req: Request, res: Response, next: NextFunction) => {
 
     try {
         if (!token) {
-            throw new Error('NoTokenException');
+            throw new UnauthorizedError();
         }
 
         const now = new Date().getTime();
         const decodedToken = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
 
         if (decodedToken.exp <= now) {
-            throw new Error('TokenExpiredException');
+            throw new UnauthorizedError();
         }
 
         const user = await getConnection().getRepository(User).findOne({
@@ -27,7 +28,7 @@ const router = async (req: Request, res: Response, next: NextFunction) => {
         });
 
         if (!user) {
-            throw new Error('UnauthorizedAccessException');
+            throw new UnauthorizedError();
         }
 
         res.locals.jwtPayload = decodedToken;
@@ -47,9 +48,9 @@ const router = async (req: Request, res: Response, next: NextFunction) => {
         next();
     } catch (err) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
-            data: '',
+            data: undefined,
             error: err.message,
-            statusCode: StatusCodes.UNAUTHORIZED,
+            statusCode: err.statusCode,
         });
     }
 };

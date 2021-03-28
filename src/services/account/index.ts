@@ -7,55 +7,60 @@ import { BCRYPT_ROUNDS } from '../../utils/constants';
 import User from '../../entity/User';
 import IApiReturn from '../../interfaces/IApiReturn';
 import SignInDataDTO from '../../interfaces/SignInDataDTO';
-import { SignInDataResponse } from '../../interfaces/SignInDataResponse';
+import { SignInDataResponse } from '../../types/SignInDataResponse';
+import UnauthorizedError from '../../types/errors/UnauthorizedError';
+import UnavailableUsernameOrEmailError from '../../types/errors/UnavailableUsernameOrEmailError';
+import InternalServerError from '../../types/errors/InternalServerError';
+import InvalidPasswordError from '../../types/errors/InvalidPasswordError';
 
 export default class AccountService {
     async signUp(signUpData: SignUpDataDTO): Promise<IApiReturn<User, string>> {
         const dbConnection = await getConnection();
         const UserRepository = dbConnection.getRepository(User);
 
-        const existingUser = await UserRepository.findOne({
-            username: signUpData.username,
-            email: signUpData.email,
-        });
-
-        if (!!existingUser) {
-            return {
-                data: undefined,
-                error: 'UsernameOrEmailInUseException',
-                statusCode: StatusCodes.BAD_REQUEST,
-            };
-        }
-
-        const hashedPasswd = await hashPassword(signUpData.password, BCRYPT_ROUNDS);
-
-        const newUser = new User();
-
-        newUser.email = signUpData.email;
-        newUser.username = signUpData.username;
-        newUser.name = signUpData.name;
-        newUser.password = hashedPasswd;
-        newUser.createdAt = new Date();
-
         try {
+            const existingUser = await UserRepository.findOne({
+                username: signUpData.username,
+                email: signUpData.email,
+            });
+
+            if (!!existingUser) {
+                throw new UnavailableUsernameOrEmailError();
+            }
+
+            const hashedPasswd = await hashPassword(signUpData.password, BCRYPT_ROUNDS);
+
+            const newUser = new User();
+
+            newUser.email = signUpData.email;
+            newUser.username = signUpData.username;
+            newUser.name = signUpData.name;
+            newUser.password = hashedPasswd;
+            newUser.createdAt = new Date();
+
             const savedUser = await UserRepository.save(newUser);
+
+            if (!savedUser) {
+                throw new InternalServerError();
+            }
+
             delete savedUser.password;
             return {
                 data: savedUser,
                 error: '',
                 statusCode: StatusCodes.CREATED,
             };
-        } catch (e) {
+        } catch (err) {
             return {
                 data: undefined,
-                error: e,
-                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                error: err.message,
+                statusCode: err.statusCode,
             };
         }
     }
 
     async signIn(signInData: SignInDataDTO): Promise<IApiReturn<SignInDataResponse, string>> {
-        const dbConnection = await getConnection();
+        const dbConnection = getConnection();
         const UserRepository = dbConnection.getRepository(User);
 
         try {
@@ -64,13 +69,13 @@ export default class AccountService {
             });
 
             if (!user) {
-                throw new Error('WrongUserOrPasswordExcepion');
+                throw new UnauthorizedError();
             }
 
             const doPasswordsMatch = await comparePasswords(signInData.password, user.password);
 
             if (!doPasswordsMatch) {
-                throw new Error('WrongUserOrPasswordExcepion');
+                throw new UnauthorizedError();
             }
 
             const now = new Date().getTime();
@@ -95,7 +100,7 @@ export default class AccountService {
             return {
                 data: undefined,
                 error: err.message,
-                statusCode: StatusCodes.BAD_REQUEST,
+                statusCode: err.statusCode,
             };
         }
     }
@@ -115,11 +120,7 @@ export default class AccountService {
             const doPasswordsMatch = await comparePasswords(newPassword, user.password);
 
             if (doPasswordsMatch) {
-                let errDesc = {
-                    message: 'InvalidPasswordException',
-                    statusCode: StatusCodes.BAD_REQUEST,
-                };
-                throw new Error(JSON.stringify(errDesc));
+                throw new InvalidPasswordError();
             }
 
             const newPasswdHash = await hashPassword(newPassword, BCRYPT_ROUNDS);
@@ -130,11 +131,7 @@ export default class AccountService {
             const updatedUser = await UserRepository.save(user);
 
             if (!updatedUser) {
-                let errDesc = {
-                    message: 'CouldNotChangePasswordException',
-                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-                };
-                throw new Error(JSON.stringify(errDesc));
+                throw new InternalServerError();
             }
 
             return {
@@ -143,11 +140,10 @@ export default class AccountService {
                 statusCode: StatusCodes.OK,
             };
         } catch (err) {
-            const errorObj = JSON.parse(err.message);
             return {
                 data: undefined,
-                error: errorObj.message,
-                statusCode: errorObj.statusCode,
+                error: err.message,
+                statusCode: err.statusCode,
             };
         }
     }
