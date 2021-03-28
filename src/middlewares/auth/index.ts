@@ -1,27 +1,24 @@
-import { Request, Response, NextFunction } from "express";
-import { StatusCodes } from "http-status-codes";
-import * as jwt from "jsonwebtoken";
-import { getConnection } from "typeorm";
-import JWTPayload from "../../interfaces/JWTPayload";
-import User from "../../entity/User";
+import { Request, Response, NextFunction } from 'express';
+import { StatusCodes } from 'http-status-codes';
+import * as jwt from 'jsonwebtoken';
+import { getConnection } from 'typeorm';
+import JWTPayload from '../../interfaces/JWTPayload';
+import User from '../../entity/User';
 
 const router = async (req: Request, res: Response, next: NextFunction) => {
     const { authorization } = req.headers;
-    const token = authorization.split(" ")[1];
-
-    if (!token) {
-        throw new Error("NoTokenException");
-    }
+    const token = authorization.split(' ')[1];
 
     try {
+        if (!token) {
+            throw new Error('NoTokenException');
+        }
+
         const now = new Date().getTime();
-        const decodedToken = jwt.verify(
-            token,
-            process.env.JWT_SECRET
-        ) as JWTPayload;
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
 
         if (decodedToken.exp <= now) {
-            throw new Error("TokenExpiredException");
+            throw new Error('TokenExpiredException');
         }
 
         const user = await getConnection().getRepository(User).findOne({
@@ -30,7 +27,7 @@ const router = async (req: Request, res: Response, next: NextFunction) => {
         });
 
         if (!user) {
-            throw new Error("UnauthorizedAccessException");
+            throw new Error('UnauthorizedAccessException');
         }
 
         res.locals.jwtPayload = decodedToken;
@@ -38,19 +35,19 @@ const router = async (req: Request, res: Response, next: NextFunction) => {
         const newToken = jwt.sign(
             {
                 ...user,
-                password: "",
+                password: '',
                 iat: now,
                 exp: now + 60 * 60 * 1000,
             },
-            process.env.JWT_SECRET
+            process.env.JWT_SECRET,
         );
 
-        res.setHeader("Authorization", `Bearer ${newToken}`);
+        res.setHeader('Authorization', `Bearer ${newToken}`);
 
         next();
     } catch (err) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
-            data: "",
+            data: '',
             error: err.message,
             statusCode: StatusCodes.UNAUTHORIZED,
         });
