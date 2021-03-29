@@ -12,6 +12,7 @@ import UnauthorizedError from '../../types/errors/UnauthorizedError';
 import UnavailableUsernameOrEmailError from '../../types/errors/UnavailableUsernameOrEmailError';
 import InternalServerError from '../../types/errors/InternalServerError';
 import InvalidPasswordError from '../../types/errors/InvalidPasswordError';
+import sharp = require('sharp');
 
 export default class AccountService {
     async signUp(signUpData: SignUpDataDTO): Promise<IApiReturn<User, string>> {
@@ -146,5 +147,17 @@ export default class AccountService {
                 statusCode: err.statusCode,
             };
         }
+    }
+
+    async addOrChangeAvatar(
+        username: string,
+        avatar: Express.Multer.File,
+    ): Promise<IApiReturn<string, string>> {
+        const avatarBuffer = await sharp(avatar.buffer)
+            .resize({ height: 250, width: 250 })
+            .png()
+            .toBuffer();
+        console.log(Buffer.from('\\x' + avatarBuffer.toString('hex')));
+        return { data: 'ok', error: 'noerror', statusCode: StatusCodes.OK };
     }
 }
