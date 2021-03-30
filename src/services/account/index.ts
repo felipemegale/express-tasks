@@ -151,11 +151,35 @@ export default class AccountService {
         username: string,
         avatar: Express.Multer.File,
     ): Promise<IApiReturn<string, string>> {
-        const avatarBuffer = await sharp(avatar.buffer)
-            .resize({ height: 250, width: 250 })
-            .png()
-            .toBuffer();
-        console.log(Buffer.from('\\x' + avatarBuffer.toString('hex')));
-        return { data: 'ok', error: 'noerror', statusCode: StatusCodes.OK };
+        try {
+            const user = await this.UserRepository.findOne({
+                where: [{ username: username }],
+            });
+
+            const avatarBuffer = await sharp(avatar.buffer)
+                .resize({ height: 250, width: 250 })
+                .png()
+                .toBuffer();
+
+            user.avatar = avatarBuffer;
+
+            const updatedUser = this.UserRepository.save(user);
+
+            if (!updatedUser) {
+                throw new InternalServerError();
+            }
+
+            return {
+                data: 'avatar updated successfully',
+                error: undefined,
+                statusCode: StatusCodes.OK,
+            };
+        } catch (err) {
+            return {
+                data: undefined,
+                error: err.message,
+                statusCode: err.statusCode,
+            };
+        }
     }
 }

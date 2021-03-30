@@ -8,6 +8,7 @@ import AccountService from '../../services/account';
 const wrapper = (): Router => {
     const router = Router();
     const _accountService = new AccountService();
+
     const upload = multer({
         limits: {
             fileSize: 10000000,
