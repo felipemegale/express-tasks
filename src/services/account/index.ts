@@ -1,4 +1,4 @@
-import { getConnection } from 'typeorm';
+import { getConnection, Repository } from 'typeorm';
 import { hash as hashPassword, compare as comparePasswords } from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { StatusCodes } from 'http-status-codes';
@@ -15,12 +15,16 @@ import InvalidPasswordError from '../../types/errors/InvalidPasswordError';
 import sharp = require('sharp');
 
 export default class AccountService {
-    async signUp(signUpData: SignUpDataDTO): Promise<IApiReturn<User, string>> {
-        const dbConnection = await getConnection();
-        const UserRepository = dbConnection.getRepository(User);
+    UserRepository: Repository<User>;
 
+    constructor() {
+        const dbConnection = getConnection();
+        this.UserRepository = dbConnection.getRepository(User);
+    }
+
+    async signUp(signUpData: SignUpDataDTO): Promise<IApiReturn<User, string>> {
         try {
-            const existingUser = await UserRepository.findOne({
+            const existingUser = await this.UserRepository.findOne({
                 username: signUpData.username,
                 email: signUpData.email,
             });
@@ -39,7 +43,7 @@ export default class AccountService {
             newUser.password = hashedPasswd;
             newUser.createdAt = new Date();
 
-            const savedUser = await UserRepository.save(newUser);
+            const savedUser = await this.UserRepository.save(newUser);
 
             if (!savedUser) {
                 throw new InternalServerError();
@@ -61,11 +65,8 @@ export default class AccountService {
     }
 
     async signIn(signInData: SignInDataDTO): Promise<IApiReturn<SignInDataResponse, string>> {
-        const dbConnection = getConnection();
-        const UserRepository = dbConnection.getRepository(User);
-
         try {
-            const user = await UserRepository.findOne({
+            const user = await this.UserRepository.findOne({
                 where: [{ username: signInData.username }, { email: signInData.email }],
             });
 
@@ -110,11 +111,8 @@ export default class AccountService {
         username: string,
         newPassword: string,
     ): Promise<IApiReturn<string, string>> {
-        const dbConnection = await getConnection();
-        const UserRepository = dbConnection.getRepository(User);
-
         try {
-            const user = await UserRepository.findOne({
+            const user = await this.UserRepository.findOne({
                 where: [{ username: username }],
             });
 
@@ -129,7 +127,7 @@ export default class AccountService {
             user.updatedAt = new Date();
             user.password = newPasswdHash;
 
-            const updatedUser = await UserRepository.save(user);
+            const updatedUser = await this.UserRepository.save(user);
 
             if (!updatedUser) {
                 throw new InternalServerError();
