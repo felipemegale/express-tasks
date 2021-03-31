@@ -183,4 +183,24 @@ export default class AccountService {
             };
         }
     }
+
+    async getAvatar(username: string): Promise<IApiReturn<Buffer, string>> {
+        try {
+            const user = await this.UserRepository.findOne({
+                where: [{ username: username }],
+            });
+
+            return {
+                data: user.avatar,
+                error: undefined,
+                statusCode: StatusCodes.OK,
+            };
+        } catch (err) {
+            return {
+                data: undefined,
+                error: err.message,
+                statusCode: err.statusCode,
+            };
+        }
+    }
 }

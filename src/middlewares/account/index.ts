@@ -51,6 +51,15 @@ const wrapper = (): Router => {
         res.status(addOrChangeAvatarResult.statusCode).json(addOrChangeAvatarResult);
     });
 
+    router.get('/avatar', AuthMiddleware, async (req, res) => {
+        const { jwtPayload } = res.locals;
+        const { username } = jwtPayload;
+        const getAvatarResult = await _accountService.getAvatar(username);
+
+        res.set('Content-Type', 'image/png');
+        res.status(getAvatarResult.statusCode).send(getAvatarResult.data);
+    });
+
     router;
 
     return router;
