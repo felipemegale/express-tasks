@@ -164,7 +164,7 @@ export default class AccountService {
 
             user.avatar = avatarBuffer;
 
-            const updatedUser = this.UserRepository.save(user);
+            const updatedUser = await this.UserRepository.save(user);
 
             if (!updatedUser) {
                 throw new InternalServerError();
