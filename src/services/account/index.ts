@@ -83,6 +83,7 @@ export default class AccountService {
             const now = new Date().getTime();
 
             delete user.password;
+            delete user.avatar;
 
             const userToken = jwt.sign(
                 {

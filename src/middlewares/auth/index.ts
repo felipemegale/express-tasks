@@ -36,6 +36,9 @@ const router = async (req: Request, res: Response, next: NextFunction) => {
 
         res.locals.jwtPayload = decodedToken;
 
+        delete user.password;
+        delete user.avatar;
+
         const newToken = jwt.sign(
             {
                 ...user,
