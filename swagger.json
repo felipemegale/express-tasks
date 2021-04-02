@@ -1,0 +1,117 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "version": "1.0.0",
+        "title": "Express Tasks",
+        "description": "Easily manage your tasks"
+    },
+    "host": "localhost:8000",
+    "basePath": "/api",
+    "tags": ["teste tag"],
+    "schemes": ["http", "https"],
+    "consumes": ["application/json"],
+    "produces": ["application/json"],
+    "paths": {
+        "/api/account/signup": {
+            "post": {
+                "tags": [],
+                "description": "Creates a new application user",
+                "parameters": [
+                    {
+                        "name": "SignUpDataDTO",
+                        "in": "body",
+                        "description": "New user info",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "username": "string",
+                                "email": "string",
+                                "name": "string",
+                                "password": "string"
+                            },
+                            "example": {
+                                "username": "johndoe",
+                                "email": "johndoe@email.com",
+                                "name": "John Doe",
+                                "password": "jdpasswd"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User created successfully"
+                    },
+                    "400": {
+                        "description": "Username or email already in use"
+                    },
+                    "500": {
+                        "description": "Could not create user"
+                    }
+                }
+            }
+        },
+        "/api/account/signin": {
+            "post": {
+                "tags": [],
+                "description": "",
+                "parameters": [],
+                "responses": {}
+            }
+        },
+        "/api/account/changePassword": {
+            "patch": {
+                "tags": [],
+                "description": "",
+                "parameters": [
+                    {
+                        "name": "obj",
+                        "in": "body",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "newPassword": {
+                                    "type": "string",
+                                    "example": "any"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/account/avatar": {
+            "post": {
+                "tags": [],
+                "description": "",
+                "parameters": [],
+                "responses": {}
+            },
+            "get": {
+                "tags": [],
+                "description": "",
+                "parameters": [],
+                "responses": {}
+            }
+        },
+        "/api/task/add": {
+            "post": {
+                "tags": [],
+                "description": "",
+                "parameters": [],
+                "responses": {}
+            }
+        },
+        "/api/task/all": {
+            "get": {
+                "tags": [],
+                "description": "",
+                "parameters": [],
+                "responses": {}
+            }
+        }
+    },
+    "definitions": {}
+}
