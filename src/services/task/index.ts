@@ -1,62 +1,64 @@
-import { getConnection } from 'typeorm';
-import { StatusCodes } from 'http-status-codes';
-import IApiReturn from '../../interfaces/IApiReturn';
+import { getConnection, Repository } from 'typeorm';
+import IApiResponse from '../../types/IApiResponse';
 import Task from '../../entity/Task';
 import User from '../../entity/User';
 import TaskCreateDTO from '../../interfaces/TaskCreateDTO';
+import InternalServerError from '../../types/errors/InternalServerError';
+import CreatedResponse from '../../types/responses/CreatedResponse';
+import APIErrorResponse from '../../types/responses/APIErrorResponse';
+import OkResponse from '../../types/responses/OkResponse';
 
 export default class TaskService {
-    async addTask(newTask: TaskCreateDTO, ownerId: number): Promise<IApiReturn<Task, string>> {
-        const dbConnection = await getConnection();
-        const TaskRepository = dbConnection.getRepository(Task);
-        const UserRepository = dbConnection.getRepository(User);
+    UserRepository: Repository<User>;
+    TaskRepository: Repository<Task>;
 
-        const task = new Task();
+    constructor() {
+        const dbConnection = getConnection();
+        this.UserRepository = dbConnection.getRepository(User);
+        this.TaskRepository = dbConnection.getRepository(Task);
+    }
 
-        task.title = newTask.title;
-        task.description = newTask.description;
-        task.complete = newTask.complete;
-
+    async addTask(newTask: TaskCreateDTO, ownerId: number): Promise<IApiResponse> {
         try {
-            const user = await UserRepository.findOneOrFail(ownerId);
+            const task = new Task();
+
+            task.title = newTask.title;
+            task.description = newTask.description;
+            task.complete = newTask.complete;
+
+            const user = await this.UserRepository.findOne({
+                where: [{ id: ownerId }],
+            });
+
             delete user.password;
+            delete user.avatar;
 
             task.user = user;
-            const savedTask = await TaskRepository.save(task);
+            const savedTask = await this.TaskRepository.save(task);
 
-            return {
-                data: savedTask,
-                error: undefined,
-                statusCode: StatusCodes.CREATED,
-            };
+            if (!savedTask) {
+                throw new InternalServerError();
+            }
+
+            return new CreatedResponse(savedTask);
         } catch (err) {
-            return {
-                data: undefined,
-                error: err.message,
-                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-            };
+            return new APIErrorResponse(err.statusCode, err.message);
         }
     }
 
-    async getAll(ownerId: number): Promise<IApiReturn<Task[], string>> {
-        const dbConnection = await getConnection();
-        const TaskRepository = dbConnection.getRepository(Task);
-
+    async getAll(ownerId: number): Promise<IApiResponse> {
         try {
-            const tasks = await TaskRepository.createQueryBuilder('task')
-                .where('"userId" = :ownerId', { ownerId })
-                .getMany();
-            return {
-                data: tasks,
-                error: undefined,
-                statusCode: StatusCodes.OK,
-            };
+            const tasks = await this.TaskRepository.find({
+                where: [{ id: ownerId }],
+            });
+
+            if (!tasks) {
+                throw new InternalServerError();
+            }
+
+            return new OkResponse(tasks);
         } catch (err) {
-            return {
-                data: undefined,
-                error: err.message,
-                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-            };
+            return new APIErrorResponse(err.statusCode, err.message);
         }
     }
 }

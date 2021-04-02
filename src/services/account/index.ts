@@ -1,18 +1,19 @@
 import { getConnection, Repository } from 'typeorm';
 import { hash as hashPassword, compare as comparePasswords } from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
-import { StatusCodes } from 'http-status-codes';
+import sharp = require('sharp');
 import SignUpDataDTO from '../../interfaces/SignUpDataDTO';
 import { BCRYPT_ROUNDS } from '../../utils/constants';
 import User from '../../entity/User';
-import IApiReturn from '../../interfaces/IApiReturn';
+import IApiResponse from '../../types/IApiResponse';
 import SignInDataDTO from '../../interfaces/SignInDataDTO';
-import { SignInDataResponse } from '../../types/SignInDataResponse';
 import UnauthorizedError from '../../types/errors/UnauthorizedError';
 import UnavailableUsernameOrEmailError from '../../types/errors/UnavailableUsernameOrEmailError';
 import InternalServerError from '../../types/errors/InternalServerError';
 import InvalidPasswordError from '../../types/errors/InvalidPasswordError';
-import sharp = require('sharp');
+import CreatedResponse from '../../types/responses/CreatedResponse';
+import APIErrorResponse from '../../types/responses/APIErrorResponse';
+import OkResponse from '../../types/responses/OkResponse';
 
 export default class AccountService {
     UserRepository: Repository<User>;
@@ -22,7 +23,7 @@ export default class AccountService {
         this.UserRepository = dbConnection.getRepository(User);
     }
 
-    async signUp(signUpData: SignUpDataDTO): Promise<IApiReturn<User, string>> {
+    async signUp(signUpData: SignUpDataDTO): Promise<IApiResponse> {
         try {
             const existingUser = await this.UserRepository.findOne({
                 where: [{ username: signUpData.username }, { email: signUpData.email }],
@@ -49,21 +50,15 @@ export default class AccountService {
             }
 
             delete savedUser.password;
-            return {
-                data: savedUser,
-                error: '',
-                statusCode: StatusCodes.CREATED,
-            };
+            delete savedUser.avatar;
+
+            return new CreatedResponse(savedUser);
         } catch (err) {
-            return {
-                data: undefined,
-                error: err.message,
-                statusCode: err.statusCode,
-            };
+            return new APIErrorResponse(err.statusCode, err.message);
         }
     }
 
-    async signIn(signInData: SignInDataDTO): Promise<IApiReturn<SignInDataResponse, string>> {
+    async signIn(signInData: SignInDataDTO): Promise<IApiResponse> {
         try {
             const user = await this.UserRepository.findOne({
                 where: [{ username: signInData.username }, { email: signInData.email }],
@@ -84,7 +79,7 @@ export default class AccountService {
             delete user.password;
             delete user.avatar;
 
-            const userToken = jwt.sign(
+            const token = jwt.sign(
                 {
                     ...user,
                     iat: now,
@@ -93,24 +88,13 @@ export default class AccountService {
                 process.env.JWT_SECRET,
             );
 
-            return {
-                data: { ...user, token: userToken },
-                error: undefined,
-                statusCode: StatusCodes.OK,
-            };
+            return new OkResponse({ ...user, token });
         } catch (err) {
-            return {
-                data: undefined,
-                error: err.message,
-                statusCode: err.statusCode,
-            };
+            return new APIErrorResponse(err.statusCode, err.message);
         }
     }
 
-    async changePassword(
-        username: string,
-        newPassword: string,
-    ): Promise<IApiReturn<string, string>> {
+    async changePassword(username: string, newPassword: string): Promise<IApiResponse> {
         try {
             const user = await this.UserRepository.findOne({
                 where: [{ username: username }],
@@ -133,24 +117,13 @@ export default class AccountService {
                 throw new InternalServerError();
             }
 
-            return {
-                data: 'password changed successfully',
-                error: undefined,
-                statusCode: StatusCodes.OK,
-            };
+            return new OkResponse('password changed successfully');
         } catch (err) {
-            return {
-                data: undefined,
-                error: err.message,
-                statusCode: err.statusCode,
-            };
+            return new APIErrorResponse(err.statusCode, err.message);
         }
     }
 
-    async addOrChangeAvatar(
-        username: string,
-        avatar: Express.Multer.File,
-    ): Promise<IApiReturn<string, string>> {
+    async addOrChangeAvatar(username: string, avatar: Express.Multer.File): Promise<IApiResponse> {
         try {
             const user = await this.UserRepository.findOne({
                 where: [{ username: username }],
@@ -169,37 +142,25 @@ export default class AccountService {
                 throw new InternalServerError();
             }
 
-            return {
-                data: 'avatar updated successfully',
-                error: undefined,
-                statusCode: StatusCodes.OK,
-            };
+            return new OkResponse('avatar updated successfully');
         } catch (err) {
-            return {
-                data: undefined,
-                error: err.message,
-                statusCode: err.statusCode,
-            };
+            return new APIErrorResponse(err.statusCode, err.message);
         }
     }
 
-    async getAvatar(username: string): Promise<IApiReturn<Buffer, string>> {
+    async getAvatar(username: string): Promise<IApiResponse> {
         try {
             const user = await this.UserRepository.findOne({
                 where: [{ username: username }],
             });
 
-            return {
-                data: user.avatar,
-                error: undefined,
-                statusCode: StatusCodes.OK,
-            };
+            if (!user) {
+                throw new InternalServerError();
+            }
+
+            return new OkResponse(user.avatar);
         } catch (err) {
-            return {
-                data: undefined,
-                error: err.message,
-                statusCode: err.statusCode,
-            };
+            return new APIErrorResponse(err.statusCode, err.message);
         }
     }
 }
