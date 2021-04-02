@@ -25,8 +25,7 @@ export default class AccountService {
     async signUp(signUpData: SignUpDataDTO): Promise<IApiReturn<User, string>> {
         try {
             const existingUser = await this.UserRepository.findOne({
-                username: signUpData.username,
-                email: signUpData.email,
+                where: [{ username: signUpData.username }, { email: signUpData.email }],
             });
 
             if (!!existingUser) {
