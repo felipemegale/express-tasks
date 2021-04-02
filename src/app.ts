@@ -4,6 +4,8 @@ import * as cors from 'cors';
 import * as morgan from 'morgan';
 import * as helmet from 'helmet';
 import * as dotenv from 'dotenv';
+import * as swaggerUi from 'swagger-ui-express';
+const swaggerDocument = require('../swagger.json');
 import { MORGAN_FORMAT } from './utils/constants';
 import { bgBlue } from 'chalk';
 import { createConnection, ConnectionOptions } from 'typeorm';
@@ -37,6 +39,7 @@ app.use(helmet());
 createConnection(connectionOptions)
     .then((conn) => {
         console.log(bgBlue(`CONNECTION NAME: ${conn.name}`));
+        app.use('/api/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
         app.use('/api/account', AccountMiddleware());
         app.use('/api/task', AuthMiddleware, TaskMiddleware());
     })
