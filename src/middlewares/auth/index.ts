@@ -5,6 +5,7 @@ import { getConnection } from 'typeorm';
 import JWTPayload from '../../interfaces/JWTPayload';
 import User from '../../entity/User';
 import UnauthorizedError from '../../types/errors/UnauthorizedError';
+import UnauthorizedResponse from '../../types/responses/UnauthorizedResponse';
 
 const router = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -53,11 +54,7 @@ const router = async (req: Request, res: Response, next: NextFunction) => {
 
         next();
     } catch (err) {
-        return res.status(StatusCodes.UNAUTHORIZED).json({
-            data: undefined,
-            error: err.message,
-            statusCode: err.statusCode,
-        });
+        return new UnauthorizedResponse(err.message);
     }
 };
 
