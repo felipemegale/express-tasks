@@ -1,6 +1,7 @@
-import { Column, Entity, ManyToOne } from "typeorm";
-import BaseEntity from "./BaseEntity";
-import User from "./User";
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import Attachment from './Attachment';
+import BaseEntity from './BaseEntity';
+import User from './User';
 
 @Entity()
 export default class Task extends BaseEntity {
@@ -15,4 +16,7 @@ export default class Task extends BaseEntity {
 
     @ManyToOne((type) => User, (user) => user.tasks)
     user: User;
+
+    @OneToMany((type) => Attachment, (attachment) => attachment.task)
+    attachments: Attachment[];
 }
